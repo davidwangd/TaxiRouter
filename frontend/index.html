@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />  
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />  
+    <title>拼车应用</title>
+    <style type="text/css">
+      html{height:100%}
+      body{height:100%;margin:0px;padding:0px}
+      #container{height: 80%}
+      #select{height:5%;width:100%};
+    </style>
+  </head>
+  <body>
+    <div>
+        <label> 乘客起点 </label>
+        <input type="text" id="pos1">
+        <button onclick="findPos();">查找位置</button>
+    </div>
+    <div>
+      <label> 乘客终点 </label>
+      <input type="text" id="pos2">
+      <button onclick="findRoute();">寻找路线</button>
+      <button onclick="findTaxi();">查找出租车</button>
+    </div>
+    <div>
+       <button onclick="initMap();">清空地图标注</button>
+    </div>
+    <select id="select" onchange="selectTaxi();">
+      <option value="None" id="NoneCandidate">None</option>
+    </select>
+    <div id="container"></div>
+    <div id="debuginfo"></div>
+    <script type="text/javascript" src="http://api.map.baidu.com/api?v=3.0&ak=KLYizM5xArCtZNvqp77WPtPHptTCZr8H"></script>
+    <script type="text/javascript" src="lib.js"></script>
+    <script type="text/javascript">
+        var net = require("net");
+        var host = "127.0.0.1";
+        var port = 6000;
+        var pos1 = document.getElementById("pos1");
+        var pos2 = document.getElementById("pos2");
+        var debug = document.getElementById("debuginfo");
+
+        var client = new net.Socket();
+        
+        client.connect(port, host, function(){});
+        var map;
+        function initMap(){
+            map = new BMap.Map("container");
+            var point = new BMap.Point(116.404, 39.915);
+            map.centerAndZoom(point, 15);
+            map.enableScrollWheelZoom(true);
+            map.addControl(new BMap.NavigationControl());
+            map.addControl(new BMap.ScaleControl());
+            map.addControl(new BMap.OverviewMapControl());
+            map.addControl(new BMap.MapTypeControl());
+            map.setCurrentCity("北京");
+        }
+        var taxiInfo;
+        var aysnlock = 0;
+
+        function mywrite(data){
+
+        //    while (asynlock == 1);
+        //    asynlock = 1;
+            client.write(data + " $");
+        }
+
+        function selectTaxi(){
+            asynlock = 0;
+            var select = document.getElementById("select");
+            var index = select.selectedIndex;
+        //    alert(index);
+            if (index == 0){
+                initMap();
+                return;
+            }
+            curInfo = taxiInfo[index].split(',');
+            info = "findtaxiroute";
+            for (var i = 4;i < curInfo.length; i++){
+                info += " " + curInfo[i];
+            }
+            mywrite(info);
+        }
+
+        initMap();
+        // 创建地图实例  
+        var totaldata = "";
+
+        function process(){
+            while (true){
+                index = totaldata.indexOf('$');
+                
+                debug.innerHTML = totaldata + " ( " + index;
+                if (index == -1) break;
+                str = totaldata.slice(0, index - 1);
+                totaldata = totaldata.slice(index+1, str.length);
+                var list = str.split(" ");
+                asynlock = 0;
+                if (list[0] == "Pos"){
+                    var x = parseFloat(list[1]);
+                    var y = parseFloat(list[2]);
+                    var p = new BMap.Point(x, y);
+                    var marker = new BMap.Marker(p);
+                    map.centerAndZoom(p, 16);
+                    map.addOverlay(marker);
+                }
+                // A new route to be drawn;
+                if (list[0] == "Route"){
+                    var points = []; 
+                    for (var i = 0; 3 + i * 2 < list.length;i++){
+                        var x = parseFloat(list[2+i*2]);
+                        var y = parseFloat(list[3+i*2]);
+                        points[i] = (new BMap.Point(x, y));
+                    }
+                    map.centerAndZoom(points[0], 16);
+                    map.addOverlay(new BMap.Polyline(points, {
+                        strokeColor: "blue",
+                        strokeWeight: 6,
+                        strokeOpacity: 0.5,  
+                    }), 16);
+                    map.addOverlay(new BMap.Marker(points[0]));
+                    //map.addOverlay(new BMap.Marker(points[n - 1]));
+                }
+
+                if (list[0] == "TaxiList"){
+                    taxiInfo = list;
+                    var select = document.getElementById("select");
+                    select.innerHTML = '<option value="option0" id="option0">请选择出租车进行路线查看</option>\n';
+                    for (var i = 1;i < list.length; i++){
+                        tmp = list[i].split(',');
+                        select.innerHTML += '<option value="option{0}" id="option{0}">taxi:{1} 等待距离:{2} 当前绕路:{3} 车上乘客绕路:{4}</option>\n'.format(i, tmp[0], tmp[1], tmp[2], tmp[3]);
+                    }
+                }
+                if (list[0] == "TaxiRoute"){
+                    initMap();
+                    var points = [];
+                    var pos = -1; 
+                    for (var i = 0; 3 + i * 2 < list.length;i++){
+                        var x = parseFloat(list[2+i*2]);
+                        var y = parseFloat(list[3+i*2]);
+                        if (x < 0 || y < 0){
+                            pos = i;
+                        }
+                        points[i] = (new BMap.Point(x, y));
+                    }
+                    map.centerAndZoom(points[0], 16);
+                    for (var i = 0;i < pos;i++){
+                        var marker = new BMap.Marker(points[i]);
+                        if (i == 0){
+                            marker.setLabel("出租车位置");
+                            marker.setTitle("出租车位置");
+                        } else if (i == 1){
+                            marker.setLabel("乘客位置");
+                            marker.setTitle("乘客位置");
+                        }else{
+                            marker.setLabel("目的地" + (i - 1));
+                            marker.setTitle("目的地" + (i - 1));
+                        }
+                        map.addOverlay(marker);
+                    }
+                    map.addOverlay(new BMap.Polyline(points.slice(pos+1, points.length), {
+                        strokeColor: "blue",
+                        strokeWeight: 6,
+                        strokeOpacity: 0.5,  
+                    }), 16);
+                }
+                aysnlock += 1;
+            }
+        }
+
+        client.on('data', function(data){
+            totaldata += byteToString(data);
+            process();
+        });
+        // 创建点坐标  
+        function findPos(){
+            var x = document.getElementById("pos1").value;
+            //debug.innerHTML = "find Pos " + pos1.value;
+            mywrite("findpos " + pos1.value);
+        }
+        function findRoute(){
+            mywrite("findroute " + pos1.value + " " + pos2.value);
+        }
+        
+        function findTaxi(){
+            var x = document.getElementById("pos1").value;
+            var y = document.getElementById("pos2").value;
+            mywrite("findtaxi " + pos1.value + " " + pos2.value);
+        }
+    </script>
+  </body>
+</html>
