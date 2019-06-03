@@ -31,7 +31,7 @@
     </select>
     <div id="container"></div>
     <div id="debuginfo"></div>
-    <script type="text/javascript" src="http://api.map.baidu.com/api?v=3.0&ak=KLYizM5xArCtZNvqp77WPtPHptTCZr8H"></script>
+    <script type="text/javascript" src="http://api.map.baidu.com/api?v=3.0&ak=GGS5OmHcSdA7HHSIj4d58TG232Vs1h5T"></script>
     <script type="text/javascript" src="lib.js"></script>
     <script type="text/javascript">
         var net = require("net");
@@ -40,7 +40,6 @@
         var pos1 = document.getElementById("pos1");
         var pos2 = document.getElementById("pos2");
         var debug = document.getElementById("debuginfo");
-
         var client = new net.Socket();
         
         client.connect(port, host, function(){});
@@ -82,7 +81,7 @@
             }
             mywrite(info);
         }
-
+        
         initMap();
         // 创建地图实例  
         var totaldata = "";

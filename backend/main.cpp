@@ -33,7 +33,7 @@ struct Taxi{
 graph *g;
 const double pi = acos(-1);
 const int ntaxis = 100000;
-const int thres = 100000;
+const int thres = 10000;
 Taxi taxis[ntaxis + 1];
 
 void process(int argc, char *argv[]){
@@ -223,13 +223,16 @@ int main(){
 
     Link();
     // 149708
-/*
-    while (1){
-        int source = 149708;
-        int target = rand() % g->vertCnt();
+    static int lis1[5000000];
+    static int lis2[5000000];
+    static int number = 1;
 
-        g->find_adjanct(source, lis1, number, INT_MAX);
-        g->find_adjanct(target, lis2, number, INT_MAX);
+    while (1){
+        int source = 63871;
+        int target = 187163;
+
+        g->find_adjanct(source, lis1, ++number, INT_MAX);
+        g->find_adjanct(target, lis2, ++number, INT_MAX);
         
         int cnt = 0;
         const int thres = 10000;
@@ -243,7 +246,8 @@ int main(){
             switch(cur.n){
             case 0:
                 if (lis1[g->vertCnt() + cur.pos[0]] <= thres){
-                    printf("Taxi %d: wait-dis = %d\n", cur.id, lis1[g->vertCnt() + cur.pos[0]]);
+                    printf("%d Taxi %d: wait-dis = %d\n", i,cur.id, lis1[g->vertCnt() + cur.pos[0]]);
+                    printf("%d\n",g->mindist(cur.pos[0], source));
                     cnt++;
                 }
                 break;
@@ -266,6 +270,7 @@ int main(){
             printf("\n\nerror %d %d\n", source, target);
             break;
         }
+        break;
         number++;
         if (number % 1 == 0){
             printf("."); fflush(stdout);
@@ -276,10 +281,11 @@ int main(){
     memset(list, 0, 2*g->vertCnt() * sizeof(int));
     int pos = 1;
     g->find_adjanct(pos, list, 1, INT_MAX);
+/*
     for (int i = 0;i < g->vertCnt();i++){
         if (list[i] == 1) printf("%6d:%7d%7d\n", i, list[i+g->vertCnt()], g->mindist(pos, i));
     }
-
+*/
     int x[] = {1,3,4};
     int y[] = {2,10,15};
     int *pp = new int[g->vertCnt() * 4];
@@ -296,7 +302,7 @@ int main(){
     int t = clock();
 
     fprintf(stderr, "%lf\n", (double)(t-s)/CLOCKS_PER_SEC);
-*/
+
 
     return 0;
 }
