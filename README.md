@@ -94,3 +94,9 @@ npm start
 ## 第三方库
 
 使用百度地图api和electron第三方库，使用linux下的socket通讯库。
+
+## github
+
+大作业检查之后将github的仓库设置为public。
+
+[Github仓库](https://github.com/davidwangd/TaxiRouter)
